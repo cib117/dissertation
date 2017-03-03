@@ -116,7 +116,7 @@ def find_comments(doc):
     return comments
 
 def find_type(comment):
-    '''
+    """
     Function to fin the snippet comment type.
     The type provides information about the text. For instance type 4 indicates a headers, 6 a question etc.
     
@@ -125,12 +125,12 @@ def find_type(comment):
     
     Returns:
     texttype -- digit indicating type
-    '''
+    """
     texttype = re.search(r'type: (\d+)', comment).group(1)
     return texttype
 
 def extract_old_format(doc, date, head, filename):
-    '''
+    """
     Function to extract member ID, text type, and text from raw html pages that have old format (before sept 2012).
     
     Keyword arguments:
@@ -141,83 +141,97 @@ def extract_old_format(doc, date, head, filename):
     
     Returns:
     date.jsonl - jsonl file containing relevant legislative text and corresponding metadata for each day
-    missing.txt - 
-    '''
-    alltexts = [] # list for storing relevant text
+    missing.txt - txt file containing file names of html pages with no relevant text
+    """
+    alltexts = [] # list for storing relevant text and metadata
     missing = [] # list for keeping account of html docs that don't contain relevant text
     doc = re.sub('<span class="column".*?</span>', ' ', doc) # remove html span class="column" tags
     speakers, positions = find_speaker_position(doc) ## get speaker
-    if len(positions) == 0:
-        pass
+    if len(positions) == 0: # check length of positions list, 0 indicates no relevant text
+        pass 
         print 'No relevant text in document'
         missing.append(filename)
-    else:
+    else: # If there is relevant text, use tag to break text into chunks by speakers
         for i, j, k in zip(speakers, speakers[1:], positions): 
-            expression = '(?<='+i+').*?(?='+j+')'
+            expression = '(?<='+i+').*?(?='+j+')' # get stuff between speaker tags
             exp = re.compile(expression, re.DOTALL)
-            section = re.search(exp, doc[k-2:]).group(0)
+            section = re.search(exp, doc[k-2:]).group(0) # search from 2 positions before the location of the first tag
             try:
-                textdic = {}
-                textdic['member'] = find_member(section)
-                textdic['date'] = date
+                textdic = {} # dictionary for text and metadata
+                textdic['member'] = find_member(section) # get member id
+                textdic['date'] = date # add to date to dictionary
             except:
-                continue
-            textdic['text'] = extract_text(section)
+                continue # if there is a problem with member/date, move to next text chunk
+            textdic['text'] = extract_text(section) # get text
             if '<font color' in i and 'Written' in head:
-                textdic['type']  = 'WrittenQs'
+                textdic['type']  = 'WrittenQs' # identify written question
             elif 'speaker' in i and 'Written' in head:
-                textdic['type'] = 'WrittenAns'
+                textdic['type'] = 'WrittenAns' # identify answer to written question
             elif '<font color' in i and 'Question' in head:
-                textdic['type'] = 'OralQs'
+                textdic['type'] = 'OralQs' # identify oral question
             else:
-                textdic['type'] = 'Speech'
-            alltexts.append(textdic)
+                textdic['type'] = 'Speech' # if known of above conditions met, mark as a speech
+            alltexts.append(textdic) # append to list for text and metadata
         ## Write to file
-        fname = "json/"+str(date)+".jsonl"
-        with open(fname, 'a+') as f:
-            for t in alltexts:
+        fname = "json/"+str(date)+".jsonl" # name of json for relevant date
+        with open(fname, 'a+') as f: # append or creat json file for date
+            for t in alltexts: # write all text dictionaries to json file
                 f.write(json.dumps(t, ensure_ascii=False)+"\n")
-    mname = "missing.txt"
+    mname = "missing.txt" 
     with open(mname, 'a+') as miss:
-        for m in missing:
+        for m in missing: # write names of html without relevant text to file
             miss.write(m+"\n")
     print "File Done..."           
         
 def extract_new_format(doc, date, head):
-    '''
-    Function to extract member ID, text type, and text from raw html pages that have old format.
-    '''
-    alltexts = []
-    doc = re.sub('<span class="column".*?</span>', ' ', doc)
-    comments  =  find_comments(doc)
-    for i, j in zip(comments, comments[1:]):
-        expression = '(?<='+i+').*?(?='+j+')'
-        exp = re.compile(expression, re.DOTALL)
+    """
+    Function to extract member ID, text type, and text from raw html pages that have old format (sept 2012 onwards).
+    
+    Keyword arguments:
+    doc -- full html document containing legislative text
+    date -- date for document
+    head -- document header
+    
+    Returns:
+    date.jsonl - jsonl file containing relevant legislative text and corresponding metadata for each day
+    """
+    alltexts = [] # list for storing relevant text and metadata
+    doc = re.sub('<span class="column".*?</span>', ' ', doc) # remove html span class="column" tags
+    comments  =  find_comments(doc) # find comments in html document
+    for i, j in zip(comments, comments[1:]): # loop through comments
+        expression = '(?<='+i+').*?(?='+j+')' # get stuff between speaker tags
+        exp = re.compile(expression, re.DOTALL) 
         section = re.search(exp, doc).group(0)
         try:
-            textdic = {}
-            textdic['member'] = find_member(section)
-            textdic['date'] = date
+            textdic = {} # dictionary for text and metadata
+            textdic['member'] = find_member(section) # get member id
+            textdic['date'] = date # add date to dictionary
         except:
             continue
-        textdic['text'] = extract_text(section)
-        if find_type(i)=='5' and 'Written' in head:
+        textdic['text'] = extract_text(section) # get text 
+        if find_type(i)=='5' and 'Written' in head: # check if it is written question
             textdic['type'] = 'WrittenQs'
-        elif find_type(i)=='7' in i and 'Written' in head:
+        elif find_type(i)=='7' in i and 'Written' in head: # check if it is written answer
             textdic['type'] = 'WrittenAns'
-        elif find_type(i)=='5' in i and 'Question' in head:
+        elif find_type(i)=='5' in i and 'Question' in head: # check if it is oral question
             textdic['type'] = 'OralQs'
         else:
-            textdic['type'] = 'Speech'
-        alltexts.append(textdic)
+            textdic['type'] = 'Speech' # if it none of above, mark as speech
+        alltexts.append(textdic) # append dicitionary to list
         print "File done..."
     ## Write to file
-    fname = "json/"+str(date)+".jsonl"
+    fname = "json/"+str(date)+".jsonl" # append dicitonaries to json file for date
     with open(fname, 'a+') as f:
         for t in alltexts:
             f.write(json.dumps(t, ensure_ascii=False)+"\n")
             
 def html_to_json(html):
+    """
+    Wrapper function to extract relevant information from using above functions and write to json
+    
+    Keyword arguments:
+    html -- html document to parse
+    """
     print html
     docname = html
     html = open(html, 'r').read()
@@ -230,6 +244,5 @@ def html_to_json(html):
         extract_new_format(doc=html, date=date, head=header)
         
 ## Loop through folders and documents and information from html
-for year in range(2007, 2016+1):
-    for txt in sorted(glob.glob('html/'+str(year)+'/*')):
+for txt in sorted(glob.glob('dail_html/*')):
         html_to_json(txt)
