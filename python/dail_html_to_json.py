@@ -173,7 +173,7 @@ def extract_old_format(doc, date, head, filename):
                 textdic['type'] = 'Speech' # if known of above conditions met, mark as a speech
             alltexts.append(textdic) # append to list for text and metadata
         ## Write to file
-        fname = "json/"+str(date)+".jsonl" # name of json for relevant date
+        fname = "dail_json/"+str(date)+".jsonl" # name of json for relevant date
         with open(fname, 'a+') as f: # append or creat json file for date
             for t in alltexts: # write all text dictionaries to json file
                 f.write(json.dumps(t, ensure_ascii=False)+"\n")
@@ -220,7 +220,7 @@ def extract_new_format(doc, date, head):
         alltexts.append(textdic) # append dicitionary to list
         print "File done..."
     ## Write to file
-    fname = "json/"+str(date)+".jsonl" # append dicitonaries to json file for date
+    fname = "dail_json/"+str(date)+".jsonl" # append dicitonaries to json file for date
     with open(fname, 'a+') as f:
         for t in alltexts:
             f.write(json.dumps(t, ensure_ascii=False)+"\n")
