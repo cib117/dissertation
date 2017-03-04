@@ -6,6 +6,30 @@ import time
 import urllib2
 from urllib2 import URLError, HTTPError
 
+def removeDups(seq, idfun=None): 
+   """
+   Function to remove duplicates from list
+   
+   Keyword arguments:
+   seq -- list of strings, some of which may be duplicates
+   
+   Returns:
+   result -- list of strings, with no duplicates
+   """
+   if idfun is None:
+       def idfun(x): return x
+   seen = {}
+   result = []
+   for item in seq:
+       marker = idfun(item)
+       # in old Python versions:
+       # if seen.has_key(marker)
+       # but in new ones:
+       if marker in seen: continue
+       seen[marker] = 1
+       result.append(item)
+   return result
+
 def get_month_urls(year):
     """Get the month index urls from the Dail website for a given year.
 
@@ -75,8 +99,14 @@ for yr in xrange(2007, 2016+1):
 urllinks = []
 for link in monthlinks:
     urllinks.extend(getSpeechUrls(link))
+
+# Remove the fragment identifier to prevent scraping pages multiple times. The last link in the broken, so drop it.    
+urllinks = [re.sub(r'[#][A-Z0-9]+', '', link) for link in urllinks[:-1]]
+
+# Remove duplicates
+urllinks = removeDups(urllinks)
     
 # save the speech/question links to a text file
-out = open('speechlinks.txt', 'w')
+out = open('data/speechlinks.txt', 'w')
 for item in urllinks:
   out.write("%s\n" % item)

@@ -66,6 +66,6 @@ def scrape_speeches(links, logname, folder):
     logfile.close()                       
 
 # Open the list of urls
-urls = open('speechlinks_cleaned.txt', 'r').read().splitlines()
+urls = open('data/speechlinks.txt', 'r').read().splitlines()
 # Scrape speeches
 scrapeSpeeches(urls, 'dailscrapelog.txt', 'dail_html')
